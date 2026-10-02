@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Valorant Rank Overlay – Setup</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #0d0f12; color: #e6e9ed; font-family: 'Segoe UI', system-ui, sans-serif; }
+    main { max-width: 960px; margin: 0 auto; padding: 24px 16px 48px; display: grid; gap: 24px; grid-template-columns: 1fr; }
+    @media (min-width: 860px) { main { grid-template-columns: 1fr 1fr; } .full { grid-column: 1 / -1; } }
+    h1 { grid-column: 1 / -1; margin: 0; font-size: 24px; }
+    section { background: #161a1f; border: 1px solid #252b33; border-radius: 12px; padding: 16px; }
+    h2 { margin: 0 0 12px; font-size: 14px; text-transform: uppercase; letter-spacing: .08em; color: #8b95a1; }
+    label { display: block; font-size: 13px; color: #aeb7c2; margin: 10px 0 4px; }
+    input[type=text], input[type=password], input[type=number], select {
+      width: 100%; padding: 8px 10px; background: #0d0f12; color: inherit; border: 1px solid #2a3038; border-radius: 8px; font: inherit;
+    }
+    input[type=color] { width: 44px; height: 30px; padding: 0; border: 1px solid #2a3038; border-radius: 6px; background: none; }
+    .row { display: flex; gap: 10px; align-items: end; }
+    .row > * { flex: 1; }
+    .colors { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px 12px; }
+    .colors label { display: flex; align-items: center; justify-content: space-between; margin: 0; }
+    .checks { display: flex; flex-wrap: wrap; gap: 6px 16px; }
+    .checks label { display: flex; align-items: center; gap: 6px; margin: 0; }
+    button { padding: 9px 14px; border: 0; border-radius: 8px; background: #ff4655; color: #fff; font-weight: 700; cursor: pointer; }
+    button.sec { background: #2a3038; }
+    .preview { background: repeating-conic-gradient(#1b1f25 0 25%, #14171c 0 50%) 0 0 / 20px 20px; border-radius: 8px; padding: 16px; overflow: auto; }
+    .preview iframe { width: 550px; height: 200px; border: 0; display: block; background: transparent; }
+    .url { display: flex; gap: 8px; }
+    .url input { flex: 1; }
+    .warn { font-size: 12px; color: #e0a458; margin: 8px 0 0; }
+    .hint { font-size: 12px; color: #8b95a1; margin: 6px 0 0; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Valorant Rank Overlay</h1>
+
+  <section>
+    <h2>Account</h2>
+    <div class="row">
+      <div><label for="name">Riot name</label><input type="text" id="name" placeholder="Player"></div>
+      <div><label for="tag">Tag</label><input type="text" id="tag" placeholder="1234"></div>
+    </div>
+    <label for="region">Region</label>
+    <select id="region">
+      <option value="ap">AP</option><option value="na">NA</option><option value="eu">EU</option>
+      <option value="kr">KR</option><option value="latam">LATAM</option><option value="br">BR</option>
+    </select>
+    <label for="key">HenrikDev API key</label>
+    <input type="password" id="key" placeholder="HDEV-...">
+    <p class="hint">Free key: join the HenrikDev Discord and generate one from the dashboard.</p>
+    <label><input type="checkbox" id="showkey"> Show key</label>
+  </section>
+
+  <section>
+    <h2>Style</h2>
+    <div class="colors">
+      <label>Background <input type="color" id="bg"></label>
+      <label>Border <input type="color" id="borderColor"></label>
+      <label>Accent <input type="color" id="accent"></label>
+      <label>Rank text <input type="color" id="rankColor"></label>
+      <label>Labels <input type="color" id="labelColor"></label>
+      <label>Positive <input type="color" id="winColor"></label>
+      <label>Negative <input type="color" id="lossColor"></label>
+    </div>
+    <label for="opacity">Background opacity: <span id="opacity-v"></span>%</label>
+    <input type="range" id="opacity" min="0" max="100" style="width:100%">
+    <label for="radius">Corner radius: <span id="radius-v"></span>px</label>
+    <input type="range" id="radius" min="0" max="40" style="width:100%">
+    <div class="checks" style="margin-top:10px">
+      <label><input type="checkbox" id="border"> Border</label>
+      <label><input type="checkbox" id="shadow"> Shadow</label>
+      <label><input type="checkbox" id="anim"> Animations</label>
+    </div>
+  </section>
+
+  <section>
+    <h2>Content</h2>
+    <div class="checks" id="shows">
+      <label><input type="checkbox" value="rank"> Rank</label>
+      <label><input type="checkbox" value="rr"> RR bar</label>
+      <label><input type="checkbox" value="wl"> Today W-L</label>
+      <label><input type="checkbox" value="last"> Last match RR</label>
+      <label><input type="checkbox" value="today"> Today RR</label>
+    </div>
+    <div class="row">
+      <div><label for="resetHour">Daily reset hour (0-23)</label><input type="number" id="resetHour" min="0" max="23"></div>
+      <div><label for="refresh">Refresh (seconds, min 30)</label><input type="number" id="refresh" min="30"></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Preview</h2>
+    <div class="preview"><iframe id="preview" title="preview"></iframe></div>
+  </section>
+
+  <section class="full">
+    <h2>OBS Browser Source URL</h2>
+    <div class="url">
+      <input type="text" id="url" readonly>
+      <button id="copy">Copy</button>
+      <button class="sec" id="reset">Reset</button>
+    </div>
+    <p class="warn">This URL contains your API key. Don't show it on stream or share it.</p>
+    <p class="hint">In OBS: Sources → + → Browser → paste URL, width 550, height 200.</p>
+  </section>
+</main>
+
+<script src="js/config.js"></script>
+<script>
+(function () {
+  const STORE = 'ro-config';
+  const $ = (id) => document.getElementById(id);
+  const fields = Object.keys(RO.DEFAULTS).filter((k) => k !== 'show' && k !== 'platform');
+
+  let cfg = Object.assign({}, RO.DEFAULTS);
+  try { Object.assign(cfg, JSON.parse(localStorage.getItem(STORE) || '{}')); } catch (e) {}
+  // Allow loading from a pasted overlay query string too.
+  if (location.search) cfg = RO.fromParams(location.search);
+
+  function write() {
+    for (const k of fields) {
+      const el = $(k);
+      if (!el) continue;
+      if (el.type === 'checkbox') el.checked = !!cfg[k]; else el.value = cfg[k];
+    }
+    const show = cfg.show.split(',');
+    document.querySelectorAll('#shows input').forEach((i) => (i.checked = show.includes(i.value)));
+    $('opacity-v').textContent = cfg.opacity;
+    $('radius-v').textContent = cfg.radius;
+  }
+
+  function read() {
+    for (const k of fields) {
+      const el = $(k);
+      if (!el) continue;
+      if (el.type === 'checkbox') cfg[k] = el.checked;
+      else if (RO.NUM_KEYS.includes(k)) cfg[k] = Number(el.value);
+      else cfg[k] = el.value.trim();
+    }
+    cfg.show = [...document.querySelectorAll('#shows input:checked')].map((i) => i.value).join(',');
+    $('opacity-v').textContent = cfg.opacity;
+    $('radius-v').textContent = cfg.radius;
+  }
+
+  let timer;
+  function update() {
+    read();
+    try { localStorage.setItem(STORE, JSON.stringify(cfg)); } catch (e) {}
+    const q = RO.toParams(cfg);
+    const base = new URL('overlay.html', location.href).href;
+    $('url').value = base + '?' + q;
+    clearTimeout(timer);
+    timer = setTimeout(() => { $('preview').src = 'overlay.html?' + q; }, 400);
+  }
+
+  document.querySelectorAll('input, select').forEach((el) => {
+    if (el.id === 'showkey' || el.id === 'url') return;
+    el.addEventListener('input', update);
+    el.addEventListener('change', update);
+  });
+  $('showkey').addEventListener('change', (e) => { $('key').type = e.target.checked ? 'text' : 'password'; });
+  $('copy').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText($('url').value); } catch (e) { $('url').select(); document.execCommand('copy'); }
+    $('copy').textContent = 'Copied!';
+    setTimeout(() => ($('copy').textContent = 'Copy'), 1200);
+  });
+  $('reset').addEventListener('click', () => { cfg = Object.assign({}, RO.DEFAULTS); write(); update(); });
+
+  write();
+  update();
+})();
+</script>
+</body>
+</html>

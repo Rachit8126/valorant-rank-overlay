@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Valorant Rank Overlay</title>
+  <link rel="stylesheet" href="css/overlay.css">
+</head>
+<body>
+  <div class="card" id="card">
+    <div class="rank" data-item="rank">
+      <img id="rank-icon" alt="" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==">
+      <div class="name" id="rank-name">&nbsp;</div>
+    </div>
+    <div class="info">
+      <div data-item="rr">
+        <div class="rr-row">
+          <div class="rr-val"><span id="rr-num"></span><small>RR</small><span class="popup" id="popup"></span></div>
+        </div>
+        <div class="bar"><i id="rr-bar"></i></div>
+      </div>
+      <div class="stats">
+        <div class="stat" data-item="wl">
+          <div class="l">Today W-L</div>
+          <div class="v"><span class="w" id="wins">0</span><span class="x">-</span><span class="lo" id="losses">0</span></div>
+        </div>
+        <div class="stat" data-item="last">
+          <div class="l">Last match</div>
+          <div class="v zero" id="last-rr">–</div>
+        </div>
+        <div class="stat" data-item="today">
+          <div class="l">Today RR</div>
+          <div class="v zero" id="today-rr">–</div>
+        </div>
+      </div>
+    </div>
+    <div class="status" id="status"></div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/stats.js"></script>
+  <script src="js/render.js"></script>
+  <script>
+    (async function () {
+      const c = RO.fromParams(location.search);
+      RO.applyStyle(c);
+      RO.applyVisibility(c);
+
+      // Test mode: no API polling; the test page drives the card via postMessage.
+      if (new URLSearchParams(location.search).get('test') === '1') {
+        window.addEventListener('message', (e) => {
+          const m = e.data || {};
+          if (m.type === 'ro-render') RO.render(m.mmr, m.stats);
+          else if (m.type === 'ro-reset') {
+            RO.state = { tierId: null, rr: null };
+            RO.render(m.mmr, m.stats);
+          } else if (m.type === 'ro-style') {
+            RO.applyStyle(Object.assign({}, c, m.cfg));
+            RO.applyVisibility(Object.assign({}, c, m.cfg));
+          } else if (m.type === 'ro-status') RO.setStatus(m.msg);
+        });
+        parent.postMessage({ type: 'ro-ready' }, '*');
+        return;
+      }
+
+      if (!c.name || !c.tag || !c.key) {
+        RO.setStatus('Missing Riot ID or API key');
+        return;
+      }
+
+      let delay = Math.max(30, c.refresh) * 1000;
+      async function tick() {
+        let next = Math.max(30, c.refresh) * 1000;
+        try {
+          const [mmr, history] = await Promise.all([RO.fetchMmr(c), RO.fetchHistory(c)]);
+          const stats = RO.computeStats(history, c.resetHour);
+          if (stats.lastRR === null) stats.lastRR = mmr.lastChange;
+          await RO.render(mmr, stats);
+          RO.setStatus('');
+        } catch (e) {
+          RO.setStatus(e.message || 'Error');
+          if (e.status === 429) next = Math.max(next, (e.retryAfter || 60) * 1000 + 5000);
+          if (e.status === 401 || e.status === 403 || e.status === 404) next = Math.max(next, 120000);
+        }
+        setTimeout(tick, next);
+      }
+      tick();
+    })();
+  </script>
+</body>
+</html>
